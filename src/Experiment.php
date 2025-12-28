@@ -1,6 +1,6 @@
 <?php
 /**
- * InnoCraft Ltd - We are the makers of Piwik Analytics, the leading open source analytics platform.
+ * InnoCraft Ltd - We are the makers of Matomo Analytics, the leading open source analytics platform.
  *
  * @link https://www.innocraft.com
  * @license https://www.gnu.org/licenses/lgpl-3.0.en.html LGPL v3.0
@@ -60,7 +60,7 @@ class Experiment {
     /**
      * Creates a new experiment
      *
-     * @param string $experimentNameOrId Can be any experiment name or an id of the experiment (eg as given by A/B Testing for Piwik)
+     * @param string $experimentNameOrId Can be any experiment name or an id of the experiment (eg as given by A/B Testing for Matomo)
      * @param array|VariationInterface[] $variations
      * @param array $config
      */
@@ -77,7 +77,7 @@ class Experiment {
         } else {
             $this->variations = new Variations($experimentNameOrId, $variations);
 
-            // in Piwik A/B Testing there is always an original variation, we need to force the existence here.
+            // in Matomo A/B Testing there is always an original variation, we need to force the existence here.
             // if you do not want to have this behaviour, instead pass an instance of Variations.
             if (!$this->variations->exists(Experiment::ORIGINAL_VARIATION_NAME)
                 && !$this->variations->exists(Experiment::ORIGINAL_VARIATION_ID)) {
@@ -198,17 +198,17 @@ class Experiment {
     }
 
     /**
-     * Tracks the activation of a variation using for example the Piwik Tracker. This lets Piwik know which variation
-     * was activated and should be used if you track your application using the Piwik Tracker server side. If you are
+     * Tracks the activation of a variation using for example the Matomo Tracker. This lets Matomo know which variation
+     * was activated and should be used if you track your application using the Matomo Tracker server side. If you are
      * usually tracking using the JavaScript Tracker, have a look at {@link getTrackingScript()}.
      *
-     * @param \stdClass|\PiwikTracker $tracker   The passed object needs to implement a `doTrackEvent` method accepting
+     * @param \stdClass|\MatomoTracker $tracker   The passed object needs to implement a `doTrackEvent` method accepting
      *                                           three parameters $category, $action, $name
      */
     public function trackVariationActivation($tracker)
     {
         // we do not use an interface here for simplicity so it is not needed to use an adapter or something
-        // for Piwik tracker
+        // for Matomo tracker
         if ($tracker && method_exists($tracker, 'doTrackEvent')) {
             $variation = $this->getActivatedVariation();
 
@@ -216,7 +216,7 @@ class Experiment {
                 return;
             }
 
-            // eg PiwikTracker
+            // eg MatomoTracker
             $tracker->doTrackEvent('abtesting', $this->getExperimentName(), $variation->getName());
         } else {
             throw new InvalidArgumentException('The given tracker does not implement the doTrackEvent method');
@@ -224,20 +224,16 @@ class Experiment {
     }
 
     /**
-     * Returns the JavaScript tracking code that you can echo in your website to let Piwik know which variation was
+     * Returns the JavaScript tracking code that you can echo in your website to let Matomo know which variation was
      * activated server side.
      *
-     * Do not pass variables from $_GET or $_POST etc. Make sure to escape the variables before passing them
-     * to this method as you would otherwise risk an XSS.
-     *
-     * @param string $experimentName  ExperimentName and VariationName needs to be passed cause we do not yet have a way
-     *                                here to properly escape it to prevent XSS.
+     * @param string $experimentName
      * @param string $variationName
-     * @return string  The Piwik tracking code including the `<script>` elements and _paq.push().
+     * @return string  The Matomo tracking code including the `<script>` elements and _paq.push().
      */
     public function getTrackingScript($experimentName, $variationName)
     {
-        return sprintf('<script type="text/javascript">window._paq = window._paq || []; window._paq.push(["AbTesting::enter", {experiment: "%s", variation: "%s"}]);</script>', $experimentName, $variationName);
+        return sprintf('<script type="text/javascript">window._paq = window._paq || []; window._paq.push(["AbTesting::enter", {experiment: %s, variation: %s}]);</script>', json_encode($experimentName), json_encode($variationName));
     }
 
     /**
